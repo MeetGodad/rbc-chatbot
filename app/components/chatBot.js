@@ -25,7 +25,7 @@ export default function Chatbot() {
 
     try {
       const response = await axios.post('/api/chat', { query: input });
-      const botMessage = { type: 'bot', content: response.data.response };
+      const botMessage = { type: 'bot', content: formatResponse(response.data.response) };
       setMessages(prev => [...prev, botMessage]);
     } catch (error) {
       console.error('Error:', error);
@@ -36,8 +36,30 @@ export default function Chatbot() {
     }
   };
 
+  const formatResponse = (response) => {
+    // Split the response into sections
+    const sections = response.split('###').map(section => section.trim());
+  
+    // Format each section
+    const formattedSections = sections.map(section => {
+      if (!section) return '';
+  
+      const lines = section.split('\n');
+      const title = lines.shift();
+      const content = lines.join('\n');
+  
+      return `<h3>${title}</h3>
+        ${content.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                 .replace(/- (.*)/g, '<li>$1</li>')
+                 .replace(/\n\n/g, '<br><br>')}`;
+    });
+  
+    // Join the formatted sections
+    return formattedSections.join('');
+  };
+
   return (
-    <div className="flex flex-col h-screen bg-rbc-logo bg-cover bg-center">
+    <div className="flex flex-col h-screen bg-cover bg-center" style={{ backgroundImage: `url('/Image/background-image.jpg')` }}>
       <header className="bg-gradient-to-r from-blue-800 to-blue-900 text-white py-6 px-8 shadow-lg flex items-center justify-between">
         <h1 className="text-3xl font-bold tracking-wide">RBC Investment Assistant</h1>
       </header>
@@ -55,7 +77,14 @@ export default function Chatbot() {
                   : 'bg-gray-800 text-white'
               } transform transition-all duration-300 hover:scale-105`}
             >
-              {msg.content}
+              {msg.type === 'user' ? (
+                msg.content
+              ) : (
+                <div className="chat-response">
+                  <h3 className="text-xl font-bold mb-2">Assistant Response:</h3>
+                  <div dangerouslySetInnerHTML={{ __html: msg.content }} />
+                </div>
+              )}
             </div>
           </div>
         ))}
