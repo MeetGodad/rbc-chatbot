@@ -1,12 +1,13 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 
 export default function Home() {
   const [message, setMessage] = useState('');
   const [response, setResponse] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const textareaRef = useRef(null);
 
   const handleSubmit = async () => {
     if (!message.trim()) return;
@@ -35,6 +36,53 @@ export default function Home() {
     }
   };
 
+  const handleKeyDown = (event) => {
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      handleSubmit();
+    }
+  };
+
+  useEffect(() => {
+    const textarea = textareaRef.current;
+    if (textarea) {
+      textarea.addEventListener('keydown', handleKeyDown);
+    }
+    return () => {
+      if (textarea) {
+        textarea.removeEventListener('keydown', handleKeyDown);
+      }
+    };
+  }, [message]);
+
+  const formatResponse = (response) => {
+  let formatted = response
+    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') // Bold text
+    .replace(/### (.*?)(?=\n|$)/g, '<h3>$1</h3>') // Headers
+    .replace(/\n/g, '<br>'); // Line breaks
+
+  // Correctly format numbered lists, adjusting for the starting number
+  let counter = 1;
+  formatted = formatted.replace(/(\d+)\. (.*?)(?=\n|$)/g, (match, number, text) => {
+    if (parseInt(number) === 1) {
+      return `<li><strong>${text}</strong></li>`; // Format the first numbered item differently
+    } else {
+      return `<li>${text}</li>`;
+    }
+  });
+
+  // Correctly format bullet points
+  formatted = formatted.replace(/- (.*?)(?=\n|$)/g, '<li>$1</li>');
+
+  // Wrap lists in <ul> or <ol>
+  formatted = formatted.replace(/(<li>.*?<\/li>)/g, '<ul>$1</ul>');
+  formatted = formatted.replace(/<ul><ul>/g, '<ul>'); // Merge nested lists
+  formatted = formatted.replace(/<\/ul><\/ul>/g, '</ul>'); // Merge nested lists
+
+  return formatted;
+};
+
+
   return (
     <main className="flex min-h-screen items-center justify-center bg-cover bg-center p-6 text-white"
       style={{ backgroundImage: `url('/Image/background-image.jpg')` }}>
@@ -55,6 +103,7 @@ export default function Home() {
             className="relative"
           >
             <textarea
+              ref={textareaRef}
               value={message}
               onChange={(e) => setMessage(e.target.value)}
               placeholder="Ask about RBC services..."
@@ -66,7 +115,7 @@ export default function Home() {
               disabled={isLoading}
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
-              className="absolute right-4 bottom-2 bg-gradient-to-r from-blue-500 to-purple-600 text-white p-2 rounded-lg font-semibold text-lg shadow-lg hover:shadow-xl transition-all duration-300"
+              className="absolute right-4 bottom-20 bg-gradient-to-r from-blue-500 to-purple-600 text-white p-2 rounded-lg font-semibold text-lg shadow-lg hover:shadow-xl transition-all duration-300"
             >
               {isLoading ? (
                 <svg className="animate-spin h-6 w-6 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -87,9 +136,8 @@ export default function Home() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
             className="mt-8 p-6 bg-gray-800 rounded-lg shadow-inner"
+            dangerouslySetInnerHTML={{ __html: formatResponse(response) }}
           >
-            <h2 className="text-2xl font-semibold mb-4 text-blue-300">Assistant Response:</h2>
-            <p className="text-gray-300 leading-relaxed">{response}</p>
           </motion.div>
         )}
       </div>
